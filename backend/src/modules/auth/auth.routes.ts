@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { z } from "zod";
+import { asyncHandler } from "../../utils/asyncHandler";
+import { HttpError } from "../../utils/httpError";
+import { sendOtp, verifyOtp } from "./auth.service";
+const router = Router();
+const phoneSchema = z.string().trim().min(7).max(20).regex(/^[+\d\s().-]+$/, "Invalid phone number");
+router.post("/send-otp", (req, res, next) => { const p = z.object({phone:phoneSchema}).safeParse(req.body); if (!p.success) return next(new HttpError(400, p.error.issues[0]?.message || "Invalid input")); res.json({success:true,message:"OTP generated. Check backend terminal.",...sendOtp(p.data.phone)}); });
+router.post("/verify-otp", asyncHandler(async (req,res) => { const p=z.object({phone:phoneSchema,otp:z.string().regex(/^\d{6}$/, "OTP must contain six digits")}).safeParse(req.body); if(!p.success) throw new HttpError(400,p.error.issues[0]?.message || "Invalid input"); res.json({success:true,...await verifyOtp(p.data.phone,p.data.otp)}); }));
+export default router;
